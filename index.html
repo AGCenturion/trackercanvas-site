@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>3D Scan Tracker Dot Sheet</title>
+  <style>
+    :root{ --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e2e8f0; --border:#374151; --accent:#1f2937; --accent2:#3b82f6; }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif}
+    header{position:sticky;top:0;z-index:10;background:color-mix(in oklab, var(--bg) 85%, #000 15%);backdrop-filter:saturate(1.2) blur(6px);border-bottom:1px solid var(--border)}
+    header .bar{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:flex-start;padding:10px 14px}
+    h1{font-size:18px;margin:0}
+    button, select, input[type=number]{background:var(--accent);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:10px 12px}
+    button{cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.25)} button:hover{filter:brightness(1.05)}
+    select, input[type=number]{width:100%;font-size:15px}
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+    input[type=number]{ -moz-appearance:textfield; appearance:textfield; }
+
+    .layout{max-width:1200px;margin:0 auto;display:flex;gap:6px;padding:12px}
+    .sidebar{flex:0 0 340px;min-width:280px;max-width:380px;position:sticky;top:64px;align-self:flex-start;max-height:calc(100vh - 76px);overflow:auto}
+    .stage{flex:1;min-width:0;display:flex;justify-content:flex-start;align-items:flex-start;padding:4px}
+
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;box-shadow:0 4px 10px rgba(0,0,0,.2);padding:14px;margin-bottom:12px}
+    .card h2{font-size:12px;margin:0 0 10px 0;color:var(--muted);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+    label{font-size:12px;color:var(--muted);display:block;margin:0 0 6px 2px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .row-1{display:grid;grid-template-columns:1fr;gap:10px}
+
+    .stepper{position:relative}
+    .stepper input{width:100%;padding-right:86px}
+    .stepper .btns{position:absolute;top:50%;right:6px;transform:translateY(-50%);display:flex;gap:8px}
+    .stepper .sbtn{width:36px;height:36px;border-radius:10px;background:var(--panel);border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;line-height:1;user-select:none}
+    .stepper .sbtn:hover{filter:brightness(1.08)}
+
+    .rangeRow{display:flex;align-items:center;gap:10px}
+    input[type=range]{-webkit-appearance:none;width:100%;height:6px;background:linear-gradient(90deg,var(--accent2),#64748b);border-radius:999px;outline:none;border:1px solid var(--border)}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#e2e8f0;border:2px solid #0f172a;box-shadow:0 1px 2px rgba(0,0,0,.4)}
+    input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#e2e8f0;border:2px solid #0f172a;box-shadow:0 1px 2px rgba(0,0,0,.4)}
+
+    .page{background:#fff;position:relative;box-shadow:0 18px 40px rgba(0,0,0,.35);}
+    .placed{position:absolute;right:12px;top:12px;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:8px;background:rgba(15,23,42,.85);color:#fff}
+    #pageBox svg{width:100%;height:auto;display:block}
+
+    @media print{
+      body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .sidebar, header{display:none}
+      .layout{padding:0}
+      .page{box-shadow:none}
+      #pageBox svg{width:auto;height:auto}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="bar"><h1>3D Scan Tracker Dot Sheet</h1></div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <div class="card">
+        <h2>Page</h2>
+        <div class="row">
+          <div>
+            <label>Paper preset</label>
+            <select id="preset">
+              <option value="letter">US Letter (8.5 × 11 in)</option>
+              <option value="legal">US Legal (8.5 × 14 in)</option>
+              <option value="tabloid">Tabloid (11 × 17 in)</option>
+              <option value="a4">A4 (210 × 297 mm)</option>
+              <option value="a3">A3 (297 × 420 mm)</option>
+              <option value="custom">Custom (set below)</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:end;gap:10px">
+            <label style="margin:0 0 0 0;visibility:hidden">_</label>
+            <label style="display:flex;gap:8px;align-items:center"><input id="rotate" type="checkbox"> Rotate 90°</label>
+          </div>
+        </div>
+        <div class="row">
+          <div class="stepper">
+            <label>Width (mm)</label>
+            <input id="wMM" type="number" step="0.1" />
+            <div class="btns"><button class="sbtn" data-target="wMM" data-delta="-0.1">–</button><button class="sbtn" data-target="wMM" data-delta="0.1">+</button></div>
+          </div>
+          <div class="stepper">
+            <label>Height (mm)</label>
+            <input id="hMM" type="number" step="0.1" />
+            <div class="btns"><button class="sbtn" data-target="hMM" data-delta="-0.1">–</button><button class="sbtn" data-target="hMM" data-delta="0.1">+</button></div>
+          </div>
+        </div>
+        <div class="row-1" style="margin-top:8px">
+          <div class="stepper">
+            <label>Margin (mm)</label>
+            <input id="marginMM" type="number" step="1" />
+            <div class="btns"><button class="sbtn" data-target="marginMM" data-delta="-1">–</button><button class="sbtn" data-target="marginMM" data-delta="1">+</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Dots (mm)</h2>
+        <div class="row">
+          <div class="stepper">
+            <label>Black diameter</label>
+            <input id="blackDia" type="number" step="1" />
+            <div class="btns"><button class="sbtn" data-target="blackDia" data-delta="-1">–</button><button class="sbtn" data-target="blackDia" data-delta="1">+</button></div>
+          </div>
+          <div class="stepper">
+            <label>White diameter</label>
+            <input id="whiteDia" type="number" step="1" />
+            <div class="btns"><button class="sbtn" data-target="whiteDia" data-delta="-1">–</button><button class="sbtn" data-target="whiteDia" data-delta="1">+</button></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="stepper">
+            <label>Min edge gap between dots</label>
+            <input id="minEdgeGapMM" type="number" step="1" />
+            <div class="btns"><button class="sbtn" data-target="minEdgeGapMM" data-delta="-1">–</button><button class="sbtn" data-target="minEdgeGapMM" data-delta="1">+</button></div>
+          </div>
+          <div class="stepper">
+            <label>Target quantity</label>
+            <input id="qty" type="number" step="1" />
+            <div class="btns"><button class="sbtn" data-target="qty" data-delta="-1">–</button><button class="sbtn" data-target="qty" data-delta="1">+</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Preview & Actions</h2>
+        <div class="rangeRow" style="margin-bottom:10px">
+          <label style="min-width:110px">Preview scale</label>
+          <input id="previewScale" type="range" min="0.10" max="1.50" step="0.05" />
+          <span id="previewScaleVal" style="width:52px;text-align:right">70%</span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <button id="randomizeBtn">Click to randomize dots</button>
+          <button id="printBtn">Print</button>
+          <button id="pngBtn">Download PNG</button>
+          <span id="placedBadge" style="margin-left:auto;background:var(--accent);border:1px solid var(--border);padding:6px 10px;border-radius:999px;font-size:12px">Placed 0 / Target 0</span>
+        </div>
+        <div id="warning" style="margin-top:10px;color:#fcd34d"></div>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="page" id="pageBox">
+        <div class="placed" id="placedCorner">Placed 0</div>
+        <svg id="sheet" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const PREVIEW_MIN_PX = 120;
+
+    // Defaults updated: qty=200, previewScale=0.70
+    const state = { preset:'letter', wMM:215.9, hMM:279.4, marginMM:10, qty:200, blackDia:10, whiteDia:6, minEdgeGapMM:5, rotate:false, pngDPI:300, rngSalt: (Math.random()*0xffffffff)>>>0, previewScale: 0.70 };
+    const PRESETS = { letter:{w:215.9,h:279.4}, legal:{w:215.9,h:355.6}, tabloid:{w:279.4,h:431.8}, a4:{w:210,h:297}, a3:{w:297,h:420}, custom:null };
+    const strokeMM = 0.2;
+
+    const $ = sel => document.querySelector(sel);
+    function mmToPx(mm, dpi){ return Math.round((mm/25.4)*dpi); }
+    function makeRNG(seed){ let s=(seed>>>0)||1; return ()=>{ s=(1664525*s+1013904223)>>>0; return s/0xffffffff; }; }
+
+    function poissonDisk({width,height,radius,rng,k=30,maxPoints,offsetX=0,offsetY=0}){
+      const cellSize = radius/Math.SQRT2; const gw=Math.ceil(width/cellSize), gh=Math.ceil(height/cellSize);
+      const grid=new Array(gw*gh).fill(-1), samples=[], active=[];
+      function place(x,y){ const gx=Math.floor(x/cellSize), gy=Math.floor(y/cellSize); grid[gy*gw+gx]=samples.length; samples.push({x:x+offsetX,y:y+offsetY}); active.push(samples.length-1); }
+      if(width<=0||height<=0||radius<=0) return samples; place(rng()*width, rng()*height);
+      while(active.length){ if(maxPoints && samples.length>=maxPoints) break; const idx=Math.floor(rng()*active.length); const s=samples[active[idx]]; let placed=false; for(let i=0;i<k;i++){ const r=radius*(1+rng()); const th=2*Math.PI*rng(); const nx=(s.x-offsetX)+r*Math.cos(th), ny=(s.y-offsetY)+r*Math.sin(th); if(nx<0||ny<0||nx>=width||ny>=height) continue; const gx=Math.floor(nx/cellSize), gy=Math.floor(ny/cellSize); let ok=true; for(let yy=Math.max(0,gy-2); yy<=Math.min(gh-1,gy+2)&&ok; yy++){ for(let xx=Math.max(0,gx-2); xx<=Math.min(gw-1,gx+2)&&ok; xx++){ const gi=grid[yy*gw+xx]; if(gi!==-1){ const q=samples[gi]; const dx=(q.x-offsetX)-nx, dy=(q.y-offsetY)-ny; if(dx*dx+dy*dy < radius*radius) ok=false; }}} if(ok){ place(nx,ny); placed=true; break; }} if(!placed){ active[idx]=active[active.length-1]; active.pop(); } }
+      return samples;
+    }
+
+    function computeLayout(){
+      const preset=PRESETS[state.preset]; const pageW=state.preset==='custom'?Number(state.wMM):preset.w; const pageH=state.preset==='custom'?Number(state.hMM):preset.h;
+      const W=state.rotate?pageH:pageW, H=state.rotate?pageW:pageH; const margin=Math.max(0, Number(state.marginMM));
+      const printable={ x:margin, y:margin, w:Math.max(0,W-2*margin), h:Math.max(0,H-2*margin) };
+      const blackDia=Math.max(1, Math.round(Number(state.blackDia)||0)); const whiteDia=Math.min(Math.max(0, Math.round(Number(state.whiteDia)||0)), Math.max(0, blackDia-1));
+      const minEdgeGap=Math.max(0, Math.round(Number(state.minEdgeGapMM)||0)); const qty=Math.max(1, Math.round(Number(state.qty)||1));
+      const rng=makeRNG((state.rngSalt>>>0)||1);
+      const minCenter=Math.max(1, blackDia + minEdgeGap);
+      const border = blackDia/2 + strokeMM/2;
+      const regionW=Math.max(0, printable.w - 2*border), regionH=Math.max(0, printable.h - 2*border);
+      let points=[];
+      if(regionW>0 && regionH>0){
+        points = poissonDisk({ width:regionW, height:regionH, radius:minCenter, rng, maxPoints:qty, offsetX:printable.x+border, offsetY:printable.y+border });
+        if(points.length>qty) points.length=qty;
+        const minX=margin+border, minY=margin+border, maxX=W-margin-border, maxY=H-margin-border;
+        for(let i=0;i<points.length;i++){ const p=points[i]; if(p.x<minX)p.x=minX; if(p.x>maxX)p.x=maxX; if(p.y<minY)p.y=minY; if(p.y>maxY)p.y=maxY; }
+      }
+      return { W,H, points, blackDia, whiteDia, placed:points.length };
+    }
+
+    function render(){
+      const {W,H,points,blackDia,whiteDia,placed} = computeLayout();
+      const svg=$('#sheet'), page=$('#pageBox'), badge=$('#placedBadge'), corner=$('#placedCorner'), stage=document.querySelector('.stage');
+      svg.setAttribute('width', W+'mm'); svg.setAttribute('height', H+'mm'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+      const availW = stage.clientWidth;
+      let widthPx = Math.max(PREVIEW_MIN_PX, availW * state.previewScale);
+      const heightPx = widthPx * (H/W);
+      page.style.width = widthPx + 'px';
+      page.style.height = heightPx + 'px';
+
+      const parts=[];
+      parts.push(`<defs><clipPath id="pageClip"><rect x="0" y="0" width="${W}" height="${H}"/></clipPath></defs>`);
+      parts.push(`<rect x="0" y="0" width="${W}" height="${H}" fill="white"/>`);
+      parts.push(`<g clip-path="url(#pageClip)">`);
+      for(let i=0;i<points.length;i++){ const p=points[i];
+        parts.push(`<circle cx="${p.x}" cy="${p.y}" r="${blackDia/2}" fill="black"/>`);
+        parts.push(`<circle cx="${p.x}" cy="${p.y}" r="${whiteDia/2}" fill="white"/>`);
+        parts.push(`<circle cx="${p.x}" cy="${p.y}" r="${blackDia/2}" fill="none" stroke="black" stroke-width="0.2" vector-effect="non-scaling-stroke"/>`);
+      }
+      parts.push(`</g>`);
+      svg.innerHTML = parts.join('');
+
+      badge.textContent = `Placed ${placed} / Target ${state.qty}`;
+      corner.textContent = `Placed ${placed}`;
+
+      const issues=[]; if(state.whiteDia >= state.blackDia) issues.push('White diameter must be smaller than black diameter.');
+      if(placed < state.qty) issues.push(`Placed ${placed} of ${state.qty} with current sizes and spacing. Increase page area, reduce diameters/margins, or reduce min gap.`);
+      document.getElementById('warning').textContent = issues.join(' ');
+    }
+
+    async function savePNG(){
+      const svg=$('#sheet'); const dpi=300;
+      const vb = svg.getAttribute('viewBox').split(' ').map(Number); const W=vb[2], H=vb[3];
+      const pxW=Math.max(1,mmToPx(W,dpi)), pxH=Math.max(1,mmToPx(H,dpi));
+      const clone=svg.cloneNode(true); clone.setAttribute('xmlns','http://www.w3.org/2000/svg'); clone.setAttribute('width',pxW+'px'); clone.setAttribute('height',pxH+'px');
+      const xml=new XMLSerializer().serializeToString(clone); const svgBlob=new Blob([`<?xml version="1.0" standalone="no"?>\n`+xml],{type:'image/svg+xml;charset=utf-8'}); const url=URL.createObjectURL(svgBlob);
+      const img=new Image(); await new Promise((res,rej)=>{ img.onload=()=>res(); img.onerror=e=>rej(e); img.src=url; });
+      const can=document.createElement('canvas'); can.width=pxW; can.height=pxH; const ctx=can.getContext('2d'); ctx.drawImage(img,0,0,pxW,pxH); URL.revokeObjectURL(url);
+      if(can.toBlob){ can.toBlob(b=>{ if(!b) return; const a=document.createElement('a'); const bu=URL.createObjectURL(b); a.href=bu; a.download=`tracker-dots_${W.toFixed(1)}x${H.toFixed(1)}mm_300dpi.png`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(bu); }, 'image/png'); }
+      else { const a=document.createElement('a'); a.href=can.toDataURL('image/png'); a.download=`tracker-dots_${W.toFixed(1)}x${H.toFixed(1)}mm_300dpi.png`; document.body.appendChild(a); a.click(); a.remove(); }
+    }
+
+    function attachStepperButtons(){
+      document.querySelectorAll('.sbtn').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const id = btn.getAttribute('data-target'); const delta = Number(btn.getAttribute('data-delta'));
+          const input = document.getElementById(id); const step = Number(input.step||1);
+          let v = Number(input.value||0) + delta;
+          if(step >= 1) v = Math.round(v);
+          input.value = v;
+          input.dispatchEvent(new Event('input', {bubbles:true}));
+        });
+      });
+    }
+
+    function syncControls(){
+      document.getElementById('preset').value=state.preset; document.getElementById('wMM').value=state.wMM; document.getElementById('hMM').value=state.hMM; document.getElementById('marginMM').value=state.marginMM;
+      document.getElementById('qty').value=state.qty; document.getElementById('blackDia').value=state.blackDia; document.getElementById('whiteDia').value=state.whiteDia; document.getElementById('minEdgeGapMM').value=state.minEdgeGapMM;
+      document.getElementById('rotate').checked=state.rotate;
+      document.getElementById('wMM').disabled=state.preset!=='custom'; document.getElementById('hMM').disabled=state.preset!=='custom';
+      document.getElementById('previewScale').value = state.previewScale.toFixed(2);
+      document.getElementById('previewScaleVal').textContent = Math.round(state.previewScale*100)+'%';
+    }
+    function bumpRNG(){ state.rngSalt = (Math.random()*0xffffffff)>>>0; }
+    function attachHandlers(){
+      document.getElementById('preset').addEventListener('change', e=>{ state.preset=e.target.value; if(state.preset!=='custom'){ const p=PRESETS[state.preset]; state.wMM=p.w; state.hMM=p.h; } syncControls(); render(); });
+      document.getElementById('wMM').addEventListener('input', e=>{ state.wMM=Number(e.target.value)||0; render(); });
+      document.getElementById('hMM').addEventListener('input', e=>{ state.hMM=Number(e.target.value)||0; render(); });
+      document.getElementById('marginMM').addEventListener('input', e=>{ state.marginMM=Math.max(0, Math.round(Number(e.target.value)||0)); render(); });
+
+      ['qty','blackDia','whiteDia','minEdgeGapMM'].forEach(id=>{
+        document.getElementById(id).addEventListener('input', e=>{
+          const v = Math.max(0, Math.round(Number(e.target.value)||0));
+          state[id === 'minEdgeGapMM' ? 'minEdgeGapMM' : id] = id==='qty' ? Math.max(1, v) : (id==='blackDia' ? Math.max(1, v) : v);
+          bumpRNG(); render();
+        });
+      });
+
+      document.getElementById('rotate').addEventListener('change', e=>{ state.rotate=e.target.checked; render(); });
+      document.getElementById('previewScale').addEventListener('input', e=>{ state.previewScale = Number(e.target.value); document.getElementById('previewScaleVal').textContent = Math.round(state.previewScale*100)+'%'; render(); });
+      document.getElementById('randomizeBtn').addEventListener('click', ()=>{ bumpRNG(); render(); });
+      document.getElementById('printBtn').addEventListener('click', ()=>window.print());
+      document.getElementById('pngBtn').addEventListener('click', savePNG);
+      window.addEventListener('resize', ()=>render());
+    }
+
+    syncControls(); attachHandlers(); attachStepperButtons(); render();
+  </script>
+</body>
+</html>
